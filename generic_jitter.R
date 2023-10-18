@@ -51,21 +51,3 @@ arc.write(file.path(fgdb_path, "jittered_points"), data = points_jitter)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-points_utm$geometry
-
-#might not need this line
-points_utm2 <- data.frame(points_utm$Case_Name, points_utm$County, points_utm$Latitude, points_utm$Longitude, (st_coordinates(points_utm)))
-
-
-points_utm$geom
