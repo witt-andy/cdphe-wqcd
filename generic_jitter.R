@@ -1,59 +1,71 @@
-#generic jitter code
-
-#set working directory
-setwd(choose.dir())
-
-#load library
-library(raster)
-
-#load shapefile
-shp <- shapefile(file.choose())
-
-#random values for offsetting
-shp$x_offset <- sample(482:804, size =nrow(shp), replace = TRUE)
-shp$y_offset <- sample(482:804, size =nrow(shp), replace = TRUE)
+###### new jittering procedure working with the sf package ######
+library(sf)
 
 
-#jitter (offsetting) calculation
-##########################double check X and Y coordinate names here##########################
-shp$calc_X_jitter <- shp$long_x + sample(c(-1,1), size=nrow(shp), replace = TRUE)*shp$x_offset
-shp$calc_Y_jitter <- shp$lat_y + sample(c(-1,1), size=nrow(shp), replace = TRUE)*shp$y_offset
-##############################################################################################
+# load Decimal Degree shapefile
+points <- read_sf("C:/Users/awitt/Desktop/Deliverables/CDPHE_WQCD/Margaret Bauer/unjittered_points.shp")
+
+# plot points for future comparison
+plot(points$geometry)
+
+# setting jitter threshold
+# testing reveals, approximately 0.5 mi buffering
+points_jitter <- st_jitter(points, 0.005)
+
+# plot jittered points to visually check against original points
+plot(st_jitter(points, 0.005), add = TRUE, col = 'red')
 
 
-#turn into new data frame
-new <- data.frame(shp)
+###### interactive mapping to check the thresholds ######
 
-#more packages
-library(maptools)
-library(rgdal)
-library(sp)
+library(leaflet)
 
-#new data frame to spatial coordinates based on jittered values
-coordinates(new) =~ calc_X_jitter+calc_Y_jitter
-#define projection as UTM
-proj4string(new) <- CRS("+init=epsg:26913")
-
-#fix the shitty naming above
-library(gdata)
-new <- rename.vars(new, from = c("coords.x1", "coords.x2"), to = c("jitter_x", "jitter_y"))
-
-
-#save new file output as .shp
-raster::shapefile(new, "jittered_pts.shp", overwrite = TRUE)
+#use leaflet to create interactive web map
+m <- leaflet() %>%
+  addProviderTiles(providers$Stamen.Terrain, group = "Terrain") %>%
+  addCircles(data = points, color = "blue", popup = paste("Name: ", points$Case_Name), group = "Unjittered") %>%
+  addCircles(data = points_jitter, color = "orange", popup = paste("Name: ", points_jitter$Case_Name), group = "Jittered") %>%
+  addLayersControl(overlayGroups = c("Unjittered", "Jittered"), options = layersControlOptions(collapsed=FALSE)) %>%
+  addLegend("bottomright", colors =c("blue", "orange"), labels= c("Unjittered", "Jittered"))
 
 
 
-################################################################################################
 
-#install.packages('maps')
-#install.packages('mapdata')
-
-library(maps)
-library(mapdata)
-
-map('state', xlim = c(-110, -100), ylim = c(35, 45), col = "gray90", fill = TRUE)
-points(shp, pch = 19, col = "red", cex = 0.5)
+m
 
 
 
+
+
+
+###### save into new geodatabase ###### 
+library(arcgisbinding)
+arc.check_product()
+
+# define path
+fgdb_path <- file.path("C:/Users/awitt/Desktop/Deliverables/CDPHE_WQCD/Margaret Bauer", paste("jitter",".gdb", sep = ""))
+
+
+#create individual feature class, and puts them into the .gdb we just created
+arc.write(file.path(fgdb_path, "jittered_points"), data = points_jitter)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+points_utm$geometry
+
+#might not need this line
+points_utm2 <- data.frame(points_utm$Case_Name, points_utm$County, points_utm$Latitude, points_utm$Longitude, (st_coordinates(points_utm)))
+
+
+points_utm$geom
